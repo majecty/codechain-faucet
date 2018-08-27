@@ -66,12 +66,17 @@ export async function giveCCCWithoutLimit(
             );
             console.warn("Retry with refreshed nonce");
 
-            nonce = (await sdk.rpc.chain.getNonce(
-                context.config.faucetCodeChainAddress
-            )) as U256;
+            try {
+                nonce = (await sdk.rpc.chain.getNonce(
+                    context.config.faucetCodeChainAddress
+                )) as U256;
 
-            context.nonce = nonce.increase();
-            result = await giveCCCInternal(context, toAddress, amount, nonce);
+                context.nonce = nonce.increase();
+                result = await giveCCCInternal(context, toAddress, amount, nonce);
+            } catch (err) {
+                context.nonce = nonce.increase();
+                result = await giveCCCInternal(context, toAddress, amount, nonce);
+            }
         }
     } catch (err) {
         if (err.name !== "FaucetError") {
