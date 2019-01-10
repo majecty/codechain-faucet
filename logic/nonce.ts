@@ -1,23 +1,24 @@
-import { U256 } from "codechain-sdk/lib/core/U256";
 import { Context } from "../context";
 
-export async function getNonce(context: Context): Promise<U256> {
+export async function getSeq(context: Context): Promise<number> {
     const sdk = context.codechainSDK;
-    let nonce = (await sdk.rpc.chain.getNonce(
-        context.config.faucetCodeChainAddress
-    )) as U256;
+    let seq = await sdk.rpc.chain.getSeq(context.config.faucetCodeChainAddress);
 
-    const parcels = await sdk.rpc.chain.getPendingParcels();
-    for (const parcel of parcels) {
+    const transactions = await sdk.rpc.chain.getPendingTransactions();
+    for (const transaction of transactions) {
         if (
             context.config.faucetCodeChainAddress ===
-            parcel.getSignerAddress().toString()
+            transaction
+                .getSignerAddress({
+                    networkId: context.config.networkId
+                })
+                .toString()
         ) {
-            const pendingNonce = new U256(parcel.toJSON().nonce);
-            if (pendingNonce.value.isGreaterThanOrEqualTo(nonce.value)) {
-                nonce = pendingNonce.increase();
+            const pendingSeq = transaction.unsigned.seq()!;
+            if (pendingSeq >= seq) {
+                seq = pendingSeq + 1;
             }
         }
     }
-    return nonce;
+    return seq;
 }

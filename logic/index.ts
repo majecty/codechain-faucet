@@ -1,9 +1,9 @@
-import { H256, PlatformAddress, U256 } from "codechain-sdk/lib/core/classes";
+import { H256, PlatformAddress } from "codechain-sdk/lib/core/classes";
 import { Context } from "context";
 import * as moment from "moment";
 import * as historyModel from "../model/history";
 import { ErrorCode, FaucetError } from "./error";
-import { getNonce } from "./nonce";
+import { getSeq } from "./nonce";
 
 export async function giveCCCWithLimit(
     context: Context,
@@ -48,12 +48,12 @@ export async function giveCCCWithoutLimit(
 ): Promise<H256> {
     try {
         return await context.worker.pushJob<H256>(async () => {
-            const nonce = await getNonce(context);
+            const seq = await getSeq(context);
             const result = await giveCCCInternal(
                 context,
                 toAddress,
                 amount,
-                nonce
+                seq
             );
             return result;
         });
@@ -70,18 +70,18 @@ async function giveCCCInternal(
     context: Context,
     toAddress: PlatformAddress,
     amount: string,
-    nonce: U256
+    seq: number
 ): Promise<H256> {
     const sdk = context.codechainSDK;
-    const parcel = sdk.core.createPaymentParcel({
+    const transaction = sdk.core.createPayTransaction({
         recipient: toAddress,
         amount
     });
 
-    return sdk.rpc.chain.sendParcel(parcel, {
+    return sdk.rpc.chain.sendTransaction(transaction, {
         account: context.config.faucetCodeChainAddress,
         passphrase: context.config.faucetCodeChainPasspharase,
-        nonce,
+        seq,
         fee: String(100 * 1000 * 1000)
     });
 }
